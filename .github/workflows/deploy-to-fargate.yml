@@ -32,4 +32,4 @@ jobs:
 
     - name: Update ECS Service
       run: |
-        aws ecs update-service --cluster YOUR_CLUSTER_NAME --service YOUR_SERVICE_NAME --force-new-deployment
+        aws ecs update-service --cluster simple-node-app --service simple-node-service --force-new-deployment
