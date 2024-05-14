@@ -26,9 +26,9 @@ jobs:
 
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
-        docker build -t simple-node-github-actions .
-        docker tag simple-node-github-actions:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/simple-node-github-actions:latest
-        docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/simple-node-github-actions:latest
+        docker build -t staging .
+        docker tag staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
+        docker push staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
 
     - name: Update ECS Service
       run: |
