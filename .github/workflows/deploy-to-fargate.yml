@@ -3,7 +3,7 @@ name: Deploy to AWS Fargate
 on:
   push:
     branches:
-      - staging  # Trigger on push to main branch
+      - staging  # Trigger on push to staging branch
 
 jobs:
   build-and-deploy:
@@ -32,4 +32,4 @@ jobs:
 
     - name: Update ECS Service
       run: |
-        aws ecs update-service --cluster simple-node-app --service simple-node-service --force-new-deployment
+        aws ecs update-service --cluster simple-node-staging --service simple-staging --force-new-deployment
