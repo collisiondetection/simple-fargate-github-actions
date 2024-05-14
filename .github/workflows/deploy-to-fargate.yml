@@ -28,7 +28,7 @@ jobs:
       run: |
         docker build -t staging .
         docker tag staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
-        docker push staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
+        docker push  975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
 
     - name: Update ECS Service
       run: |
