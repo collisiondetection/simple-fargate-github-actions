@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - 'feature'
-      - 'feature/**'
+      - 'feature/*'
 
 jobs:
   build-and-deploy:
