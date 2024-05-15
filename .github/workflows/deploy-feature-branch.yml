@@ -60,6 +60,6 @@ jobs:
     - name: Deploy to Fargate
       run: |
         # Get the ARN of the new task definition
-        NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition simple-node-staging-task --query 'taskDefinition.taskDefinitionArn' --output text)
+        NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
         # Update the Fargate service to use the new task definition
         aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $NEW_TASK_DEFINITION
