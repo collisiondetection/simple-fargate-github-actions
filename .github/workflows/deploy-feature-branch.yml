@@ -1,6 +1,5 @@
 name: Deploy Feature Branch to Fargate
 
-# This workflow triggers on push to any branch that starts with 'feature'
 on:
   push:
     branches:
@@ -13,11 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout the code from the current branch
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Configure AWS credentials from secrets stored in GitHub
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -25,41 +22,30 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    # Login to Amazon ECR
     - name: Login to Amazon ECR
       run: |
         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
 
-    # Build, tag, and push Docker image to Amazon ECR
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
-        # Extract the branch name and commit SHA to use as the Docker image tag
+        # Extract the branch name to use as the Docker image tag
         BRANCH_NAME=${GITHUB_REF##*/}
-        COMMIT_SHA=${GITHUB_SHA}
-        IMAGE_TAG="${BRANCH_NAME}-${COMMIT_SHA}"
-        # Build the Docker image
+        IMAGE_TAG="${BRANCH_NAME}"
+        # Build, tag, and push the Docker image
         docker build -t feature .
-        # Tag the Docker image
         docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
-        # Push the Docker image to ECR
         docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
 
-    # Update the ECS Task Definition with the new Docker image
     - name: Update ECS Task Definition
       run: |
-        # Extract the branch name and commit SHA to use as the Docker image tag
         BRANCH_NAME=${GITHUB_REF##*/}
-        COMMIT_SHA=${GITHUB_SHA}
-        IMAGE_TAG="${BRANCH_NAME}-${COMMIT_SHA}"
+        IMAGE_TAG="${BRANCH_NAME}"
         # Replace the placeholder in the task definition template with the actual Docker image URL
-        sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' task-def-template.json > task-def-updated.json
+        sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' .github/workflows/task-def-template.json > .github/workflows/task-def-updated.json
         # Register the new task definition with ECS
-        aws ecs register-task-definition --cli-input-json file://task-def-updated.json
+        aws ecs register-task-definition --cli-input-json file://.github/workflows/task-def-updated.json
 
-    # Deploy the new task definition to Fargate
     - name: Deploy to Fargate
       run: |
-        # Get the ARN of the new task definition
         NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
-        # Update the Fargate service to use the new task definition
         aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $NEW_TASK_DEFINITION
