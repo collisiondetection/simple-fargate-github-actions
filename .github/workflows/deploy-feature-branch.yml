@@ -37,6 +37,14 @@ jobs:
         docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
         docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
 
+    - name: Debug Environment Variables
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG=$(echo $BRANCH_NAME | tr '/:' '-')
+        echo "BRANCH_NAME=${BRANCH_NAME}"
+        echo "IMAGE_TAG=${IMAGE_TAG}"
+        echo "Replacing IMAGE_PLACEHOLDER with 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
+        
     - name: Update ECS Task Definition
       run: |
           BRANCH_NAME=${GITHUB_REF##*/}
