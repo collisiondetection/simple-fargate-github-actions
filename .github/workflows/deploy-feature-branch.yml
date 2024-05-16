@@ -48,7 +48,14 @@ jobs:
           # Register the new task definition with ECS
           aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
+    #- name: Deploy to Fargate
+    #  run: |
+    #    NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+    #    aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $NEW_TASK_DEFINITION
+#
     - name: Deploy to Fargate
       run: |
-        NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
-        aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $NEW_TASK_DEFINITION
+        # Get the latest revision of the task definition
+        TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+        # Update the ECS service to use the new task definition
+        aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $TASK_DEFINITION_ARN
