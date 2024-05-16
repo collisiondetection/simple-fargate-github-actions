@@ -37,7 +37,7 @@ jobs:
     - name: Update ECS Task Definition and Deploy
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-        task-definition: .github/workflows/task-def-template.json
+        task-definition: task-def-template.json
         service: feature-service
         cluster: feature-cluster
         wait-for-service-stability: true
