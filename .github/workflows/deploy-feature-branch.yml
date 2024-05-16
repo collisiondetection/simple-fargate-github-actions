@@ -50,7 +50,7 @@ jobs:
           BRANCH_NAME=${GITHUB_REF##*/}
           IMAGE_TAG="${BRANCH_NAME}"
           # Replace the placeholder in the task definition template with the actual Docker image URL
-          sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' task-def-template.json > task-def-updated.json
+          sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
           # Output the updated task definition for debugging
           cat task-def-updated.json
           # Register the new task definition with ECS
