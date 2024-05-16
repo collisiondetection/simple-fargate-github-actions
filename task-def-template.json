@@ -6,7 +6,7 @@
     "containerDefinitions": [
         {
             "name": "feature",
-            "image": "IMAGE-PLACEHOLDER",
+            "image": "IMAGE_PLACEHOLDER",
             "cpu": 0,
             "portMappings": [
                 {
