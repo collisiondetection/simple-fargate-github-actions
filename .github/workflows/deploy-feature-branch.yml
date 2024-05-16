@@ -43,7 +43,7 @@ jobs:
         # Replace the placeholder in the task definition template with the actual Docker image URL
         sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' task-def-template.json > task-def-updated.json
         # Register the new task definition with ECS
-        aws ecs register-task-definition --cli-input-json file://.github/workflows/task-def-updated.json
+        aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
     - name: Deploy to Fargate
       run: |
