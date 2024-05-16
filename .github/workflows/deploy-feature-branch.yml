@@ -52,7 +52,7 @@ jobs:
         COMMIT_SHA=${GITHUB_SHA}
         IMAGE_TAG="${BRANCH_NAME}-${COMMIT_SHA}"
         # Replace the placeholder in the task definition template with the actual Docker image URL
-        sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' .github/workflowstask-def-template.json > task-def-updated.json
+        sed 's|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g' task-def-template.json > task-def-updated.json
         # Register the new task definition with ECS
         aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
