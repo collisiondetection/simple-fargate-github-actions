@@ -30,6 +30,7 @@ jobs:
       run: |
         # Extract the branch name to use as the Docker image tag
         BRANCH_NAME=${GITHUB_REF##*/}
+        echo "Branch name: $BRANCH_NAME"
         IMAGE_TAG="${BRANCH_NAME}"
         # Build, tag, and push the Docker image
         docker build -t feature .
