@@ -38,6 +38,6 @@ jobs:
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: task-def-template.json
-        service: feature-service
-        cluster: feature-cluster
+        service: feature
+        cluster: feature
         wait-for-service-stability: true
