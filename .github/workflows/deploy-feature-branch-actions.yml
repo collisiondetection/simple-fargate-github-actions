@@ -40,4 +40,4 @@ jobs:
         task-definition: task-def-template.json
         service: feature
         cluster: feature
-        wait-for-service-stability: true
+        wait-for-service-stability: false
