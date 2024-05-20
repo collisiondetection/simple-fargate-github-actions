@@ -1,0 +1,69 @@
+name: Deploy Feature Branch to Fargate
+
+on:
+  push:
+    branches:
+      - 'feature'
+      - 'feature/*'
+      - 'feature-[0-9]*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
+
+    - name: Build, tag, and push Docker image to Amazon ECR
+      run: |
+        # Extract the branch name to use as the Docker image tag
+        BRANCH_NAME=${GITHUB_REF##*/}
+        echo "Branch name: $BRANCH_NAME"
+        IMAGE_TAG="${BRANCH_NAME}"
+        # Build, tag, and push the Docker image
+        docker build -t feature .
+        docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+        docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - name: Debug Environment Variables
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG=$(echo $BRANCH_NAME | tr '/:' '-')
+        echo "BRANCH_NAME=${BRANCH_NAME}"
+        echo "IMAGE_TAG=${IMAGE_TAG}"
+        echo "Replacing IMAGE_PLACEHOLDER with 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
+
+    - name: Update ECS Task Definition
+      run: |
+          BRANCH_NAME=${GITHUB_REF##*/}
+          IMAGE_TAG="${BRANCH_NAME}"
+          # Replace the placeholder in the task definition template with the actual Docker image URL
+          sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
+          # Output the updated task definition for debugging
+          cat task-def-updated.json
+          # Register the new task definition with ECS
+          aws ecs register-task-definition --cli-input-json file://task-def-updated.json
+
+    #- name: Deploy to Fargate
+    #  run: |
+    #    NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+    #    aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $NEW_TASK_DEFINITION
+#
+    - name: Deploy to Fargate
+      run: |
+        # Get the latest revision of the task definition
+        TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+        # Update the ECS service to use the new task definition
+        aws ecs update-service --cluster feature --service feature --force-new-deployment --task-definition $TASK_DEFINITION_ARN
