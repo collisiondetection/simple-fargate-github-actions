@@ -1,0 +1,45 @@
+name: Remove Feature Containers
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - staging
+
+jobs:
+  remove-feature-containers:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Install GitHub CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gh
+
+    - name: Get merged PR branch name
+      id: pr-info
+      run: |
+        BRANCH_NAME=$(echo ${{ github.event.pull_request.head.ref }})
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        echo "Merged PR branch name: $BRANCH_NAME"
+
+    - name: Update and Delete ECS Service
+      env:
+        BRANCH_NAME: ${{ env.BRANCH_NAME }}
+      run: |
+        SERVICE_NAME="feature-${{ env.BRANCH_NAME }}" # Ensure each feature branch has a unique service name
+        echo "Setting desired count to 0 for service $SERVICE_NAME"
+        aws ecs update-service --cluster feature-cluster --service $SERVICE_NAME --desired-count 0
+        echo "Deleting service $SERVICE_NAME"
+        aws ecs delete-service --cluster feature-cluster --service $SERVICE_NAME --force
