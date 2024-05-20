@@ -1,9 +1,9 @@
-name: Deploy to AWS Fargate
+name: Deploy to AWS Fargate Staging
 
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - staging  # Trigger on push to staging branch
 
 jobs:
   build-and-deploy:
@@ -26,10 +26,10 @@ jobs:
 
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
-        docker build -t simple-node-github-actions .
-        docker tag simple-node-github-actions:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/simple-node-github-actions:latest
-        docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/simple-node-github-actions:latest
+        docker build -t staging .
+        docker tag staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
+        docker push  975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
 
     - name: Update ECS Service
       run: |
-        aws ecs update-service --cluster simple-node-app --service simple-node-service --force-new-deployment
+        aws ecs update-service --cluster simple-node-staging --service simple-staging --force-new-deployment
