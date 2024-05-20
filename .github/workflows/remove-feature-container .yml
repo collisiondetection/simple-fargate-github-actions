@@ -50,7 +50,11 @@ jobs:
             CONTAINER_IMAGE=$(aws ecs describe-tasks --cluster feature --tasks $TASK --query 'tasks[0].containers[0].image' --output text)
             echo "Task $TASK is running image $CONTAINER_IMAGE"
             
-            if [[ $CONTAINER_IMAGE == 975622744795.dkr.ecr.us-east-1.amazonaws.com/$BRANCH_NAME* ]]; then
+            # Extract the tag part from the image name
+            IMAGE_TAG=$(echo $CONTAINER_IMAGE | awk -F: '{print $2}')
+            echo "Extracted image tag: $IMAGE_TAG"
+            
+            if [[ $IMAGE_TAG == $BRANCH_NAME* ]]; then
               echo "Stopping task $TASK with image $CONTAINER_IMAGE"
               aws ecs stop-task --cluster feature --task $TASK
               echo "Stopped task $TASK"
