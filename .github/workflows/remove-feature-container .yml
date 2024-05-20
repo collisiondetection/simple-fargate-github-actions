@@ -32,29 +32,30 @@ jobs:
       run: |
         BRANCH_NAME=$(echo ${{ github.event.pull_request.head.ref }})
         echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        echo "Merged PR branch name: $BRANCH_NAME"
 
     - name: List and Remove Feature Container
       env:
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
       run: |
-        if [[ "$BRANCH_NAME" == feature-* ]]; then
-          # List running tasks in the feature cluster
-          TASKS=$(aws ecs list-tasks --cluster feature --query 'taskArns' --output text)
-          
-          if [ -z "$TASKS" ]; then
-            echo "No running tasks found."
-          else
-            for TASK in $TASKS; do
-              # Describe the task to get the container image
-              CONTAINER_IMAGE=$(aws ecs describe-tasks --cluster feature --tasks $TASK --query 'tasks[0].containers[0].image' --output text)
-              
-              if [[ $CONTAINER_IMAGE == 975622744795.dkr.ecr.us-east-1.amazonaws.com/$BRANCH_NAME* ]]; then
-                # Stop the task if it's the feature container
-                aws ecs stop-task --cluster feature --task $TASK
-                echo "Stopped task $TASK with image $CONTAINER_IMAGE"
-              fi
-            done
-          fi
+        echo "Listing tasks in the feature cluster"
+        TASKS=$(aws ecs list-tasks --cluster feature --query 'taskArns' --output text)
+        echo "Found tasks: $TASKS"
+        
+        if [ -z "$TASKS" ]; then
+          echo "No running tasks found."
         else
-          echo "No feature branch found."
+          for TASK in $TASKS; do
+            echo "Describing task $TASK"
+            CONTAINER_IMAGE=$(aws ecs describe-tasks --cluster feature --tasks $TASK --query 'tasks[0].containers[0].image' --output text)
+            echo "Task $TASK is running image $CONTAINER_IMAGE"
+            
+            if [[ $CONTAINER_IMAGE == 975622744795.dkr.ecr.us-east-1.amazonaws.com/$BRANCH_NAME* ]]; then
+              echo "Stopping task $TASK with image $CONTAINER_IMAGE"
+              aws ecs stop-task --cluster feature --task $TASK
+              echo "Stopped task $TASK"
+            else
+              echo "Task $TASK does not match the branch name $BRANCH_NAME"
+            fi
+          done
         fi
