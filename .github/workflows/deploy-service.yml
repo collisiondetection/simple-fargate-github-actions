@@ -28,11 +28,9 @@ jobs:
 
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
-        # Extract the branch name to use as the Docker image tag
         BRANCH_NAME=${GITHUB_REF##*/}
         echo "Branch name: $BRANCH_NAME"
         IMAGE_TAG="${BRANCH_NAME}"
-        # Build, tag, and push the Docker image
         docker build -t feature .
         docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
         docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
@@ -49,39 +47,43 @@ jobs:
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
         IMAGE_TAG="${BRANCH_NAME}"
-        # Replace the placeholder in the task definition template with the actual Docker image URL
         sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
-        # Output the updated task definition for debugging
         cat task-def-updated.json
-        # Register the new task definition with ECS
         aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
     - name: Deploy to Fargate
       run: |
-        # Extract the branch name to use as the service name
+        CLUSTER_NAME="feature"
         BRANCH_NAME=${GITHUB_REF##*/}
         SERVICE_NAME="feature-$BRANCH_NAME"
         echo "Deploying to ECS service $SERVICE_NAME"
+
+        # Check if the cluster exists
+        CLUSTER_STATUS=$(aws ecs describe-clusters --clusters $CLUSTER_NAME --query 'clusters[0].status' --output text || echo "MISSING")
+        if [ "$CLUSTER_STATUS" == "MISSING" ]; then
+          echo "Error: ECS cluster $CLUSTER_NAME not found."
+          exit 1
+        fi
 
         # Get the latest revision of the task definition
         TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
 
         # Check if the service already exists
-        SERVICE_EXISTS=$(aws ecs describe-services --cluster feature --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
+        SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
 
-        if [ "$SERVICE_EXISTS" == "MISSING" ]; then
+        if [ "$SERVICE_STATUS" == "MISSING" ]; then
           echo "Creating ECS service $SERVICE_NAME"
           aws ecs create-service \
-            --cluster feature \
+            --cluster $CLUSTER_NAME \
             --service-name $SERVICE_NAME \
             --task-definition $TASK_DEFINITION_ARN \
             --desired-count 1 \
             --launch-type FARGATE \
             --network-configuration "awsvpcConfiguration={subnets=[subnet-12345],securityGroups=[sg-12345],assignPublicIp=ENABLED}"
         else
-          echo "Updating ECS service $SERVICE_NAME"
+          echo "Service $SERVICE_NAME already exists, updating the service"
           aws ecs update-service \
-            --cluster feature \
+            --cluster $CLUSTER_NAME \
             --service $SERVICE_NAME \
             --task-definition $TASK_DEFINITION_ARN \
             --desired-count 1
