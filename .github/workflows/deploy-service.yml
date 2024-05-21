@@ -67,9 +67,11 @@ jobs:
 
         # Get the latest revision of the task definition
         TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+        echo "Task Definition ARN: $TASK_DEFINITION_ARN"
 
         # Check if the service already exists
         SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
+        echo "Service Status: $SERVICE_STATUS"
 
         if [ "$SERVICE_STATUS" == "MISSING" ]; then
           echo "Creating ECS service $SERVICE_NAME"
