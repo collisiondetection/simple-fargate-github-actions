@@ -1,0 +1,44 @@
+name: Remove Merged Feature Branch Service
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - staging
+
+jobs:
+  remove-feature-containers:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step to checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # Step to configure AWS credentials for authentication
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    # Step to get the merged pull request branch name
+    - name: Get Merged PR Branch Name
+      id: pr-info
+      run: |
+        BRANCH_NAME=$(echo ${{ github.event.pull_request.head.ref }})
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        echo "Merged PR branch name: $BRANCH_NAME"
+
+    # Step to update the ECS service desired count to 0 and delete the ECS service
+    - name: Update and Delete ECS Service
+      env:
+        BRANCH_NAME: ${{ env.BRANCH_NAME }}
+      run: |
+        SERVICE_NAME="feature-${{ env.BRANCH_NAME }}"
+        echo "Setting desired count to 0 for service $SERVICE_NAME"
+        aws ecs update-service --cluster feature --service $SERVICE_NAME --desired-count 0
+        echo "Deleting service $SERVICE_NAME"
+        aws ecs delete-service --cluster feature --service $SERVICE_NAME --force

@@ -1,0 +1,113 @@
+name: Deploy Feature Branch to Fargate
+
+on:
+  push:
+    branches:
+      - 'feature'
+      - 'feature/*'
+      - 'feature-[0-9]*'
+
+jobs:
+  build-and-deploy-feature-to-fargate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
+
+    - name: Build Docker Image
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        echo "Branch name: $BRANCH_NAME"
+        docker build -t feature .
+
+    - name: Tag Docker Image
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG="${BRANCH_NAME}"
+        docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - name: Push Docker Image to ECR
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG="${BRANCH_NAME}"
+        docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - name: Debug Environment Variables
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG=$(echo $BRANCH_NAME | tr '/:' '-')
+        echo "BRANCH_NAME=${BRANCH_NAME}"
+        echo "IMAGE_TAG=${IMAGE_TAG}"
+        echo "Replacing IMAGE_PLACEHOLDER with 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
+
+    - name: Update ECS Task Definition with New Image
+      run: |
+        BRANCH_NAME=${GITHUB_REF##*/}
+        IMAGE_TAG="${BRANCH_NAME}"
+        sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
+        cat task-def-updated.json
+        aws ecs register-task-definition --cli-input-json file://task-def-updated.json
+
+    - name: Deploy Updated Task Definition to ECS
+      run: echo "Starting ECS Deployment Steps"
+
+    - name: Set Cluster and Service Names
+      run: |
+        CLUSTER_NAME="feature"
+        BRANCH_NAME=${GITHUB_REF##*/}
+        SERVICE_NAME="feature-$BRANCH_NAME"
+        echo "Deploying to ECS service $SERVICE_NAME"
+        echo "CLUSTER_NAME=${CLUSTER_NAME}" >> $GITHUB_ENV
+        echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
+
+    - name: Check if Cluster Exists
+      run: |
+        CLUSTER_STATUS=$(aws ecs describe-clusters --clusters $CLUSTER_NAME --query 'clusters[0].status' --output text || echo "MISSING")
+        if [ "$CLUSTER_STATUS" == "MISSING" ]; then
+          echo "Error: ECS cluster $CLUSTER_NAME not found."
+          exit 1
+        fi
+
+    - name: Get Latest Task Definition ARN
+      run: |
+        TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+        echo "Task Definition ARN: $TASK_DEFINITION_ARN"
+        echo "TASK_DEFINITION_ARN=${TASK_DEFINITION_ARN}" >> $GITHUB_ENV
+
+    - name: Check if ECS Service Exists
+      run: |
+        SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
+        echo "Service Status: $SERVICE_STATUS"
+        echo "SERVICE_STATUS=${SERVICE_STATUS}" >> $GITHUB_ENV
+
+    - name: Create or Update ECS Service
+      run: |
+        if [ "$SERVICE_STATUS" == "MISSING" ] || [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" == "None" ]; then
+          echo "Creating ECS service $SERVICE_NAME"
+          aws ecs create-service \
+            --cluster $CLUSTER_NAME \
+            --service-name $SERVICE_NAME \
+            --task-definition $TASK_DEFINITION_ARN \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-01d6b310125eeafbc,subnet-038b6260f860123c2],securityGroups=[sg-04bc3b1e571250439],assignPublicIp=ENABLED}"
+        else
+          echo "Service $SERVICE_NAME already exists, updating the service"
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service $SERVICE_NAME \
+            --task-definition $TASK_DEFINITION_ARN \
+            --desired-count 1
+        fi
