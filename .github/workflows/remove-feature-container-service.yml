@@ -12,23 +12,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    # Step to checkout the repository
+    - name: Checkout Repository
       uses: actions/checkout@v2
 
-    - name: Configure AWS credentials
+    # Step to configure AWS credentials for authentication
+    - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Get merged PR branch name
+    # Step to get the merged pull request branch name
+    - name: Get Merged PR Branch Name
       id: pr-info
       run: |
         BRANCH_NAME=$(echo ${{ github.event.pull_request.head.ref }})
         echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
         echo "Merged PR branch name: $BRANCH_NAME"
 
+    # Step to update the ECS service desired count to 0 and delete the ECS service
     - name: Update and Delete ECS Service
       env:
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
