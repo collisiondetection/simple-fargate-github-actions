@@ -8,7 +8,7 @@ on:
       - 'feature-[0-9]*'
 
 jobs:
-  build-and-deploy:
+  build-and-deploy-feature-to-fargate:
     runs-on: ubuntu-latest
 
     steps:
