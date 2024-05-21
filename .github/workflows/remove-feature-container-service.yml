@@ -1,4 +1,4 @@
-name: Remove Feature Containers
+name: Remove Merged Feature Branch Service
 
 on:
   pull_request:
@@ -22,11 +22,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Install GitHub CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gh
-
     - name: Get merged PR branch name
       id: pr-info
       run: |
@@ -38,8 +33,8 @@ jobs:
       env:
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
       run: |
-        SERVICE_NAME="feature-${{ env.BRANCH_NAME }}" # Ensure each feature branch has a unique service name
+        SERVICE_NAME="feature-${{ env.BRANCH_NAME }}"
         echo "Setting desired count to 0 for service $SERVICE_NAME"
-        aws ecs update-service --cluster feature-cluster --service $SERVICE_NAME --desired-count 0
+        aws ecs update-service --cluster feature --service $SERVICE_NAME --desired-count 0
         echo "Deleting service $SERVICE_NAME"
-        aws ecs delete-service --cluster feature-cluster --service $SERVICE_NAME --force
+        aws ecs delete-service --cluster feature --service $SERVICE_NAME --force
