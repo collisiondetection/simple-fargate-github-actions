@@ -2,7 +2,7 @@ name: My Test Single Project
 on:
   push:
     branches:
-      - feature-2
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -12,8 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  
+          fetch-depth: 0
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env: 
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=socialmoney
+            -Dsonar.projectKey=socialmoney_fargate
+            -Dsonar.sources=.
+            -Dsonar.host.url=https://sonarcloud.io
