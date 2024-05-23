@@ -24,7 +24,7 @@ jobs:
 
     - name: Login to Amazon ECR
       run: |
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 222222222222.dkr.ecr.us-east-1.amazonaws.com
 
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
@@ -34,8 +34,8 @@ jobs:
         IMAGE_TAG="${BRANCH_NAME}"
         # Build, tag, and push the Docker image
         docker build -t feature .
-        docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
-        docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+        docker tag feature:latest 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+        docker push 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
 
     - name: Debug Environment Variables
       run: |
@@ -43,14 +43,14 @@ jobs:
         IMAGE_TAG=$(echo $BRANCH_NAME | tr '/:' '-')
         echo "BRANCH_NAME=${BRANCH_NAME}"
         echo "IMAGE_TAG=${IMAGE_TAG}"
-        echo "Replacing IMAGE_PLACEHOLDER with 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
+        echo "Replacing IMAGE_PLACEHOLDER with 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
 
     - name: Update ECS Task Definition
       run: |
           BRANCH_NAME=${GITHUB_REF##*/}
           IMAGE_TAG="${BRANCH_NAME}"
           # Replace the placeholder in the task definition template with the actual Docker image URL
-          sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
+          sed "s|IMAGE_PLACEHOLDER|222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
           # Output the updated task definition for debugging
           cat task-def-updated.json
           # Register the new task definition with ECS

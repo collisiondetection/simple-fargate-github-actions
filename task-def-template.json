@@ -1,7 +1,7 @@
 {
     "family": "feature",
-    "taskRoleArn": "arn:aws:iam::975622744795:role/ecsTaskExecutionRole",
-    "executionRoleArn": "arn:aws:iam::975622744795:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::222222222222:role/ecsTaskExecutionRole",
+    "executionRoleArn": "arn:aws:iam::222222222222:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "containerDefinitions": [
         {

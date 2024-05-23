@@ -22,13 +22,13 @@ jobs:
 
     - name: Login to Amazon ECR
       run: |
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 222222222222.dkr.ecr.us-east-1.amazonaws.com
 
     - name: Build, tag, and push Docker image to Amazon ECR
       run: |
         docker build -t staging .
-        docker tag staging:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
-        docker push  975622744795.dkr.ecr.us-east-1.amazonaws.com/staging:latest
+        docker tag staging:latest 222222222222.dkr.ecr.us-east-1.amazonaws.com/staging:latest
+        docker push  222222222222.dkr.ecr.us-east-1.amazonaws.com/staging:latest
 
     - name: Update ECS Service
       run: |
