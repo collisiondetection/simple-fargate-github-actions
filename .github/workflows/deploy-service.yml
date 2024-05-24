@@ -12,9 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Checkout the code from the repository
     - name: Checkout Code
       uses: actions/checkout@v2
 
+    # Configure AWS credentials for the workflow
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -22,28 +24,33 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
+    # Login to Amazon ECR
     - name: Login to Amazon ECR
       run: |
         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 222222222222.dkr.ecr.us-east-1.amazonaws.com
 
+    # Build the Docker image
     - name: Build Docker Image
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
         echo "Branch name: $BRANCH_NAME"
         docker build -t feature .
 
+    # Tag the Docker image with the branch name
     - name: Tag Docker Image
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
         IMAGE_TAG="${BRANCH_NAME}"
         docker tag feature:latest 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
 
+    # Push the Docker image to ECR
     - name: Push Docker Image to ECR
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
         IMAGE_TAG="${BRANCH_NAME}"
         docker push 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
 
+    # Debugging step to print environment variables
     - name: Debug Environment Variables
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
@@ -52,6 +59,7 @@ jobs:
         echo "IMAGE_TAG=${IMAGE_TAG}"
         echo "Replacing IMAGE_PLACEHOLDER with 222222222222.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
 
+    # Update the ECS task definition with the new Docker image
     - name: Update ECS Task Definition with New Image
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
@@ -60,9 +68,11 @@ jobs:
         cat task-def-updated.json
         aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
+    # Placeholder for the ECS deployment steps
     - name: Deploy Updated Task Definition to ECS
       run: echo "Starting ECS Deployment Steps"
 
+    # Set the cluster and service names
     - name: Set Cluster and Service Names
       run: |
         CLUSTER_NAME="feature"
@@ -72,6 +82,7 @@ jobs:
         echo "CLUSTER_NAME=${CLUSTER_NAME}" >> $GITHUB_ENV
         echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
 
+    # Check if the ECS cluster exists
     - name: Check if Cluster Exists
       run: |
         CLUSTER_STATUS=$(aws ecs describe-clusters --clusters $CLUSTER_NAME --query 'clusters[0].status' --output text || echo "MISSING")
@@ -80,18 +91,21 @@ jobs:
           exit 1
         fi
 
+    # Get the latest task definition ARN
     - name: Get Latest Task Definition ARN
       run: |
         TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
         echo "Task Definition ARN: $TASK_DEFINITION_ARN"
         echo "TASK_DEFINITION_ARN=${TASK_DEFINITION_ARN}" >> $GITHUB_ENV
 
+    # Check if the ECS service exists
     - name: Check if ECS Service Exists
       run: |
         SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
         echo "Service Status: $SERVICE_STATUS"
         echo "SERVICE_STATUS=${SERVICE_STATUS}" >> $GITHUB_ENV
 
+    # Create or update the ECS service
     - name: Create or Update ECS Service
       run: |
         if [ "$SERVICE_STATUS" == "MISSING" ] || [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" == "None" ]; then
