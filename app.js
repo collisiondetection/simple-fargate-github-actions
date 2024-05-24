@@ -3,7 +3,7 @@ const app = express();
 
 app.get('/', function (req, res) {
 
-  res.send('Hello  Daniel, Dan  feature branch2');
+  res.send('Hello, this is feature branch 2 test');
 });
 
 app.listen(80, function () {
