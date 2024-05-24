@@ -111,3 +111,20 @@ jobs:
             --task-definition $TASK_DEFINITION_ARN \
             --desired-count 1
         fi
+    - name: Get Task ARN
+      run: |
+        TASK_ARN=$(aws ecs list-tasks --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --query 'taskArns[0]' --output text)
+        echo "Task ARN: $TASK_ARN"
+        echo "TASK_ARN=${TASK_ARN}" >> $GITHUB_ENV
+
+    - name: Get Network Interface ID
+      run: |
+        NETWORK_INTERFACE_ID=$(aws ecs describe-tasks --cluster $CLUSTER_NAME --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+        echo "Network Interface ID: $NETWORK_INTERFACE_ID"
+        echo "NETWORK_INTERFACE_ID=${NETWORK_INTERFACE_ID}" >> $GITHUB_ENV
+
+    - name: Get Public IP
+      run: |
+        PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+        echo "Public IP: $PUBLIC_IP"
+        echo "PUBLIC_IP=${PUBLIC_IP}" >> $GITHUB_ENV
