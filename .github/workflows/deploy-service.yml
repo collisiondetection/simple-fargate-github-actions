@@ -75,6 +75,7 @@ jobs:
         if [ "$CLUSTER_STATUS" == "MISSING" ]; then
           echo "Error: ECS cluster $CLUSTER_NAME not found."
           exit 1
+        fi
 
     - name: Get Latest Task Definition ARN
       run: |
