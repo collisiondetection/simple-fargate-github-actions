@@ -60,9 +60,6 @@ jobs:
         cat task-def-updated.json
         aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
-    - name: Deploy Updated Task Definition to ECS
-      run: echo "Starting ECS Deployment Steps"
-
     - name: Set Cluster and Service Names
       run: |
         CLUSTER_NAME="feature"
@@ -91,6 +88,16 @@ jobs:
         SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
         echo "Service Status: $SERVICE_STATUS"
         echo "SERVICE_STATUS=${SERVICE_STATUS}" >> $GITHUB_ENV
+
+    - name: Delete Inactive Service if Exists
+      run: |
+        echo "Service status is $SERVICE_STATUS"
+        if [ "$SERVICE_STATUS" == "INACTIVE" ]; then
+          echo "Deleting inactive service: $SERVICE_NAME"
+          aws ecs delete-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --force
+          SERVICE_STATUS="MISSING"
+          echo "SERVICE_STATUS=${SERVICE_STATUS}" >> $GITHUB_ENV
+        fi
 
     - name: Create or Update ECS Service
       run: |
