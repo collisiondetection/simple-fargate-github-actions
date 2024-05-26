@@ -1,0 +1,93 @@
+pipelines:
+  default:
+    - step:
+        name: Checkout Code
+        script:
+          - git clone $BITBUCKET_CLONE_URL && cd $(basename $_ .git)
+
+    - step:
+        name: Configure AWS Credentials
+        script:
+          - pip install awscli
+          - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+          - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+          - export AWS_DEFAULT_REGION=us-east-1
+
+    - step:
+        name: Login to Amazon ECR
+        script:
+          - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
+
+    - step:
+        name: Build Docker Image
+        script:
+          - BRANCH_NAME=${BITBUCKET_BRANCH}
+          - echo "Branch name: $BRANCH_NAME"
+          - docker build -t feature .
+
+    - step:
+        name: Tag Docker Image
+        script:
+          - BRANCH_NAME=${BITBUCKET_BRANCH}
+          - IMAGE_TAG="${BRANCH_NAME}"
+          - docker tag feature:latest 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - step:
+        name: Push Docker Image to ECR
+        script:
+          - BRANCH_NAME=${BITBUCKET_BRANCH}
+          - IMAGE_TAG="${BRANCH_NAME}"
+          - docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - step:
+        name: Debug Environment Variables
+        script:
+          - BRANCH_NAME=${BITBUCKET_BRANCH}
+          - IMAGE_TAG=$(echo $BRANCH_NAME | tr '/:' '-')
+          - echo "BRANCH_NAME=${BRANCH_NAME}"
+          - echo "IMAGE_TAG=${IMAGE_TAG}"
+          - echo "Replacing IMAGE_PLACEHOLDER with 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}"
+
+    - step:
+        name: Update ECS Task Definition with New Image
+        script:
+          - BRANCH_NAME=${BITBUCKET_BRANCH}
+          - IMAGE_TAG="${BRANCH_NAME}"
+          - sed "s|IMAGE_PLACEHOLDER|975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}|g" task-def-template.json > task-def-updated.json
+          - cat task-def-updated.json
+          - aws ecs register-task-definition --cli-input-json file://task-def-updated.json
+
+    - step:
+        name: Set Cluster and Service Names
+        script:
+          - CLUSTER_NAME="feature"
+          - SERVICE_NAME="feature-$BRANCH_NAME"
+          - echo "Deploying to ECS service $SERVICE_NAME"
+
+    - step:
+        name: Check if Cluster Exists
+        script:
+          - CLUSTER_STATUS=$(aws ecs describe-clusters --clusters $CLUSTER_NAME --query 'clusters[0].status' --output text || echo "MISSING")
+          - if [ "$CLUSTER_STATUS" == "MISSING" ]; then echo "Error: ECS cluster $CLUSTER_NAME not found."; exit 1; fi
+
+    - step:
+        name: Get Latest Task Definition ARN
+        script:
+          - TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition feature --query 'taskDefinition.taskDefinitionArn' --output text)
+          - echo "Task Definition ARN: $TASK_DEFINITION_ARN"
+
+    - step:
+        name: Check if ECS Service Exists
+        script:
+          - SERVICE_STATUS=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].status' --output text || echo "MISSING")
+          - echo "Service Status: $SERVICE_STATUS"
+
+    - step:
+        name: Delete Inactive Service if Exists
+        script:
+          - if [ "$SERVICE_STATUS" == "INACTIVE" ]; then echo "Deleting inactive service: $SERVICE_NAME"; aws ecs delete-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --force; SERVICE_STATUS="MISSING"; fi
+
+    - step:
+        name: Create or Update ECS Service
+        script:
+          - if [ "$SERVICE_STATUS" == "MISSING" ] || [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" == "None" ]; then echo "Creating ECS service $SERVICE_NAME"; aws ecs create-service --cluster $CLUSTER_NAME --service-name $SERVICE_NAME --task-definition $TASK_DEFINITION_ARN --desired-count 1 --launch-type FARGATE --network-configuration "awsvpcConfiguration={subnets=[subnet-01d6b310125eeafbc,subnet-038b6260f860123c2],securityGroups=[sg-04bc3b1e571250439],assignPublicIp=ENABLED}"; else echo "Service $SERVICE_NAME already exists, updating the service"; aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $TASK_DEFINITION_ARN --desired-count 1; fi
