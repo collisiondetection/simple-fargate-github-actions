@@ -26,11 +26,19 @@ jobs:
       run: |
         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 975622744795.dkr.ecr.us-east-1.amazonaws.com
 
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.docker-cache
+        key: ${{ runner.os }}-docker-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
+
     - name: Build Docker Image
       run: |
         BRANCH_NAME=${GITHUB_REF##*/}
         echo "Branch name: $BRANCH_NAME"
-        docker build -t feature .
+        docker build --cache-from=type=local,src=/tmp/.docker-cache -t feature .
 
     - name: Tag Docker Image
       run: |
@@ -43,6 +51,14 @@ jobs:
         BRANCH_NAME=${GITHUB_REF##*/}
         IMAGE_TAG="${BRANCH_NAME}"
         docker push 975622744795.dkr.ecr.us-east-1.amazonaws.com/feature:${IMAGE_TAG}
+
+    - name: Save Docker cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.docker-cache
+        key: ${{ runner.os }}-docker-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
 
     - name: Debug Environment Variables
       run: |
