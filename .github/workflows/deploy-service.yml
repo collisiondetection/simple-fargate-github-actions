@@ -60,9 +60,6 @@ jobs:
         cat task-def-updated.json
         aws ecs register-task-definition --cli-input-json file://task-def-updated.json
 
-    - name: Deploy Updated Task Definition to ECS
-      run: echo "Starting ECS Deployment Steps"
-
     - name: Set Cluster and Service Names
       run: |
         CLUSTER_NAME="feature"
@@ -78,7 +75,6 @@ jobs:
         if [ "$CLUSTER_STATUS" == "MISSING" ]; then
           echo "Error: ECS cluster $CLUSTER_NAME not found."
           exit 1
-        fi
 
     - name: Get Latest Task Definition ARN
       run: |
@@ -94,27 +90,28 @@ jobs:
 
     - name: Delete Inactive Service if Exists
       run: |
-          if [ "$SERVICE_STATUS" == "INACTIVE" ]; then
-            echo "Deleting inactive service: $SERVICE_NAME"
-            aws ecs delete-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --force
-          fi
-  
+        echo "Service status is $SERVICE_STATUS"
+        if [ "$SERVICE_STATUS" == "INACTIVE" ]; then
+          echo "Deleting inactive service: $SERVICE_NAME"
+          aws ecs delete-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --force
+        fi
+
     - name: Create or Update ECS Service
       run: |
-          if [ "$SERVICE_STATUS" == "MISSING" ] || [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" == "None" ]; then
-            echo "Creating ECS service $SERVICE_NAME"
-            aws ecs create-service \
-              --cluster $CLUSTER_NAME \
-              --service-name $SERVICE_NAME \
-              --task-definition $TASK_DEFINITION_ARN \
-              --desired-count 1 \
-              --launch-type FARGATE \
-              --network-configuration "awsvpcConfiguration={subnets=[subnet-01d6b310125eeafbc,subnet-038b6260f860123c2],securityGroups=[sg-04bc3b1e571250439],assignPublicIp=ENABLED}"
-          else
-            echo "Service $SERVICE_NAME already exists, updating the service"
-            aws ecs update-service \
-              --cluster $CLUSTER_NAME \
-              --service $SERVICE_NAME \
-              --task-definition $TASK_DEFINITION_ARN \
-              --desired-count 1
-          fi
+        if [ "$SERVICE_STATUS" == "MISSING" ] || [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" == "None" ]; then
+          echo "Creating ECS service $SERVICE_NAME"
+          aws ecs create-service \
+            --cluster $CLUSTER_NAME \
+            --service-name $SERVICE_NAME \
+            --task-definition $TASK_DEFINITION_ARN \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-01d6b310125eeafbc,subnet-038b6260f860123c2],securityGroups=[sg-04bc3b1e571250439],assignPublicIp=ENABLED}"
+        else
+          echo "Service $SERVICE_NAME already exists, updating the service"
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service $SERVICE_NAME \
+            --task-definition $TASK_DEFINITION_ARN \
+            --desired-count 1
+        fi
